@@ -158,14 +158,28 @@
                     // if(tempDist < (Math.sin(time) * distTresh)){ // makes distTresh oscillate up and down
                     if(tempDist < (distTresh)){
                         try{
-                        if(validCoorBuffer[Math.floor(this.x)][Math.floor(this.y)] == 1 && validCoorBuffer[Math.floor(dots[i].x)][Math.floor(dots[i].y)] == 1){
-                            ctx.beginPath();
-                            ctx.moveTo(this.x,this.y);
-                            ctx.lineTo(dots[i].x, dots[i].y);
-                            ctx.lineWidth = .3;
-                            // ctx.strokeStyle = `rgb(${255 - tempDist*distTreshMult}, 0, ${tempDist})`
-                            ctx.stroke();
-                        }
+                            if(validCoorBuffer[Math.floor(this.x)][Math.floor(this.y)] == 1 && validCoorBuffer[Math.floor(dots[i].x)][Math.floor(dots[i].y)] == 1){
+                                ctx.beginPath();
+                                ctx.moveTo(this.x,this.y);
+                                ctx.lineTo(dots[i].x, dots[i].y);
+                                ctx.lineWidth = .3;
+                                // ctx.strokeStyle = `rgb(${255 - tempDist*distTreshMult}, 0, ${tempDist})`
+                                ctx.stroke();
+                            }
+
+
+                            /*
+                                Determining if a coordinate is valid or not in real-time is far too CPU intensive. A validCoorBuffer must be utilized
+                            */
+
+                            // if(isValidImgCoor(Math.floor(this.x), Math.floor(this.y)) && isValidImgCoor(Math.floor(dots[i].x),Math.floor(dots[i].y))){ 
+                            //     ctx.beginPath();
+                            //     ctx.moveTo(this.x,this.y);
+                            //     ctx.lineTo(dots[i].x, dots[i].y);
+                            //     ctx.lineWidth = .3;
+                            //     // ctx.strokeStyle = `rgb(${255 - tempDist*distTreshMult}, 0, ${tempDist})`
+                            //     ctx.stroke();
+                            // }
                         }
                         catch(e){
                             continue;
