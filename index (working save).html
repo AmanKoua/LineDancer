@@ -1,0 +1,298 @@
+<!-- python -m http.server 8000 -->
+
+<!DOCTYPE html>
+<html>
+
+    <body style="margin: 0px">
+        <canvas id="canvas" style="border: 3px solid black; position: absolute"></canvas>
+        <img src="./person.jpg" id="img" style="visibility:hidden"/>
+        <!-- width: 1300px; height: 600px; -->
+    </body>
+    <script>
+
+        /*
+            generate x,y buffer of image BEFORE any dots are rendred onto the image. The buffer will serve
+            to tell whic
+        */
+
+        let canvas = document.getElementById("canvas");
+        canvas.width = 160;
+        canvas.height = 210;
+        ctx = canvas.getContext("2d");
+
+        let time = 0;
+        let distTresh = 20;
+        let distTreshMult = 255 / distTresh;
+        let dots = [];
+        let rect;
+
+        let img = document.getElementById("img");
+        let imgXStart = -80;
+        let imgYStart = -50;
+        let imgWidth = 300;
+        let imgHeight = 300;
+        let validCoorBuffer = []; // [x][y]
+        let killCanvasHelper = false;
+        let imageOpacity = .1;
+
+        // window.onmousemove = (e) => {
+        //     let mouseX;
+        //     let mouseY;
+        //     mouseX = e.clientX;
+        //     mouseY = e.clientY;
+        //     let colorData = ctx.getImageData(mouseX,mouseY, 1, 1);
+        //     console.log(colorData.data[0],colorData.data[1],colorData.data[2],colorData.data[3]);
+        // }
+
+        // window.onmousemove = (e) => {
+        //     let mouseX;
+        //     let mouseY;
+        //     mouseX = e.clientX;
+        //     mouseY = e.clientY;
+        //     console.log(validCoorBuffer[mouseX][mouseY], mouseX, mouseY);
+        //     // console.log(isValidImgCoor(mouseX, mouseY));
+        // }
+
+        window.onmousemove = (e) => {
+            let mouseX;
+            let mouseY;
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+
+            distTresh = mouseX / 10;
+        }
+
+        let generateValidCoorBuffer = () => { // works
+
+            return new Promise((res, rej) => {
+
+                for(let x = 0; x < canvas.width + 1; x++){
+                    let yBuff = [];
+                    for(let y = 0; y < canvas.height + 1; y++){
+
+                        if(isValidImgCoor(x,y)){
+                            yBuff[y] = 1;
+                        }
+                        else{
+                            yBuff[y] = 0;
+                        }   
+
+                    }
+                    validCoorBuffer[x] = yBuff;
+                }
+
+                res();
+
+            });
+
+        }
+
+        let isValidImgCoor = (x, y) => { // works
+
+            if(x < imgXStart || x > imgXStart + imgWidth){
+                return false;
+            }
+
+            if( y < imgYStart || y > imgYStart + imgHeight){
+                return false;
+            }
+
+            let colorData = ctx.getImageData(x,y,1,1);
+
+            if(colorData.data[0] + colorData.data[1] + colorData.data[2] < 15){
+                return true;
+            }
+
+            return false;
+        }
+
+        class Rect{
+            constructor(x,y,xEnd,yEnd){
+                this.x = x;
+                this.y = y;
+                this.xEnd = xEnd;
+                this.yEnd = yEnd;
+            }
+
+            isInRect(x,y){
+                if(x < this.x || x > this.xEnd){
+                    return false;
+                }
+
+                if(y < this.y || y > this.yEnd){
+                    return false;
+                }
+
+                return true;
+            }
+
+            draw(){
+                ctx.beginPath();
+                ctx.rect(this.x, this.y, this.xEnd - this.x, this.yEnd - this.y);
+                ctx.stroke();
+            }
+
+        }
+
+        class Dot {
+            constructor(x,y){
+                this.x = x;
+                this.y = y;
+                this.r = .2;
+                this.xMov = Math.random() / 1;
+                this.yMov = Math.random() / 1;
+            }
+
+            updatePos(canvas){
+                this.x += this.xMov;
+                this.y += this.yMov;
+
+                if(this.x > canvas.width || this.x < 0){
+                    this.xMov *= -1;
+                }
+
+                if(this.y > canvas.height || this.y < 0){
+                    this.yMov *= -1;
+                }
+
+            }
+
+            getDist(other){
+                return Math.sqrt(Math.pow((this.x - other.x),2) + Math.pow((this.y - other.y),2));
+            }
+
+            getIsValidCoor(){
+                let colorData = ctx.getImageData(this.x,this.y, 1, 1);
+
+                if(colorData[3] == 0){ // if not in image boundary
+                    return false;
+                }
+
+                if(colorData[0] + colorData[1] + colorData[2] < 10){ // if black or very dark pixel
+                    return true;
+                }
+
+                return false;
+            }   
+
+            drawLines(){
+
+                /*
+                    For each dot in the dots array, check if the dist is below the dist thresh, and that they're both in valid
+                    image portions. If so, draw a line between them.
+                */
+
+                for(let i = 0; i < dots.length; i++){
+                    let tempDist = this.getDist(dots[i])
+                    // if(tempDist < (Math.sin(time) * distTresh)){ // makes distTresh oscillate up and down
+                    if(tempDist < (distTresh)){
+                        try{
+                        if(validCoorBuffer[Math.floor(this.x)][Math.floor(this.y)] == 1 && validCoorBuffer[Math.floor(dots[i].x)][Math.floor(dots[i].y)] == 1){
+                            ctx.beginPath();
+                            ctx.moveTo(this.x,this.y);
+                            ctx.lineTo(dots[i].x, dots[i].y);
+                            ctx.lineWidth = .3;
+                            // ctx.strokeStyle = `rgb(${255 - tempDist*distTreshMult}, 0, ${tempDist})`
+                            ctx.stroke();
+                        }
+                        }
+                        catch(e){
+                            continue;
+                        }
+                    }
+                }
+            }
+
+        };
+
+        let initDots = (count) => {
+            for(let i = 0; i < count; i++){
+                let temp = new Dot(Math.random() * (canvas.width-50), Math.random() * (canvas.height - 50));
+                dots.push(temp);
+            }
+        }
+
+        let drawDot = (canvas,ctx, dot) => {
+            dot.drawLines();
+            ctx.beginPath();
+            ctx.arc(dot.x, dot.y, dot.r, 0, 2 * Math.PI);
+            ctx.fill();
+            dot.updatePos(canvas);
+            ctx.lineWidth = 1;
+            ctx.strokeStyle = "rgb(0,0,0)"
+            ctx.stroke();
+        }
+
+        let initCanvasHelper = () => {
+            ctx.drawImage(img, imgXStart,imgYStart, imgWidth, imgHeight);
+
+            if(killCanvasHelper){
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+            }
+
+            if(!killCanvasHelper){
+                requestAnimationFrame(initCanvasHelper);
+            }
+
+        }
+
+        let initCanvasForBuffer = () => {
+            return new Promise((res, rej) => {
+                initCanvasHelper();
+                res();
+            })
+        }
+
+        let draw = () => {
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            for(let i = 0 ; i < dots.length; i++){
+                drawDot(canvas,ctx,dots[i]);
+            }
+
+            ctx.globalAlpha = imageOpacity; // set image opacity
+            ctx.drawImage(img, imgXStart,imgYStart, imgWidth, imgHeight);
+            ctx.globalAlpha = 1;
+        
+            time += .1;
+            requestAnimationFrame(draw);
+
+        }
+
+        let sleep = (time) => {
+
+            return new Promise((res, rej) => {
+                setTimeout(()=>{res()},time);
+            });
+
+        }
+
+        let main = async () => {
+            initDots(1100);
+            await initCanvasForBuffer();
+            await sleep(200);
+            await generateValidCoorBuffer();
+            await sleep(200);
+            killCanvasHelper = true;
+            draw();
+        }
+
+        main();
+
+        /*
+            NOTES:
+
+            APPLICATION WILL ONLY RUN WHEN SERVED FROM LOCALHOST. Run application from
+            simply python server with "python -m http.server 8000" for python 3.x
+
+            InitDots(count) determines the number of dots
+            distTresh determines the distance threshold for drawing lines between 2 dots.
+
+            without sleeping in the main function, drawing image and generating buffer fails (sometimes).
+            Refresh of page is required in those instances.
+        */
+
+    </script>
+
+</html>
