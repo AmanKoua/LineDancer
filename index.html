@@ -2,14 +2,23 @@
 <html>
 
     <body style="margin: 0px">
-        <canvas id="canvas" style="border: 3px solid black; position: absolute"></canvas>
+        <canvas id="imgCanvas" style="border: 1px solid red; position: absolute; margin-left: 170px"></canvas>
+        <canvas id="canvas" style="border: 1px solid black; position: absolute"></canvas>
         <img src="./person.jpg" id="img" style="visibility:hidden"/>
     </body>
     <script>
 
+        let canvasWidth = 160;
+        let canvasHeight = 210;
+
+        let imgCanvas = document.getElementById("imgCanvas");
+        imgCanvas.width = canvasWidth;
+        imgCanvas.height = canvasHeight;
+        imgCtx = imgCanvas.getContext("2d");
+
         let canvas = document.getElementById("canvas");
-        canvas.width = 160;
-        canvas.height = 210;
+        canvas.width = canvasWidth;
+        canvas.height = canvasHeight;
         ctx = canvas.getContext("2d");
 
         let time = 0;
@@ -24,14 +33,14 @@
         let imgHeight = 300;
         let validCoorBuffer = []; // [x][y]
         let killCanvasHelper = false;
-        let imageOpacity = 0;
+        let imageOpacity = 1;
 
         // window.onmousemove = (e) => {
         //     let mouseX;
         //     let mouseY;
         //     mouseX = e.clientX;
         //     mouseY = e.clientY;
-        //     let colorData = ctx.getImageData(mouseX,mouseY, 1, 1);
+        //     let colorData = imgCtx.getImageData(mouseX,mouseY, 1, 1);
         //     console.log(colorData.data[0],colorData.data[1],colorData.data[2],colorData.data[3]);
         // }
 
@@ -87,7 +96,7 @@
                 return false;
             }
 
-            let colorData = ctx.getImageData(x,y,1,1);
+            let colorData = imgCtx.getImageData(x,y,1,1);
 
             if(colorData.data[0] + colorData.data[1] + colorData.data[2] < 15){ // if color is very dark (black), valid
                 return true;
@@ -97,12 +106,12 @@
         }
 
         class Dot {
-            constructor(x,y){
+            constructor(x,y,xMult, yMult){
                 this.x = x;
                 this.y = y;
                 this.r = .2;
-                this.xMov = Math.random() *  3;
-                this.yMov = Math.random() *  3;
+                this.xMov = Math.random() *  xMult;
+                this.yMov = Math.random() *  yMult;
             }
 
             updatePos(canvas){
@@ -124,7 +133,7 @@
             }
 
             getIsValidCoor(){
-                let colorData = ctx.getImageData(this.x,this.y, 1, 1);
+                let colorData = imgCtx.getImageData(this.x,this.y, 1, 1);
 
                 if(colorData[3] == 0){ // if not in image boundary
                     return false;
@@ -167,9 +176,9 @@
 
         };
 
-        let initDots = (count) => {
+        let initDots = (count, xMult, yMult) => {
             for(let i = 0; i < count; i++){
-                let temp = new Dot(Math.random() * (canvas.width-50), Math.random() * (canvas.height - 50));
+                let temp = new Dot(Math.random() * (canvas.width-50), Math.random() * (canvas.height - 50), xMult, yMult);
                 dots.push(temp);
             }
         }
@@ -186,15 +195,16 @@
         }
 
         let initCanvasHelper = () => {
-            ctx.drawImage(img, imgXStart,imgYStart, imgWidth, imgHeight);
+            imgCtx.globalAlpha = imageOpacity; // set image opacity
+            imgCtx.drawImage(img, imgXStart,imgYStart, imgWidth, imgHeight);
 
-            if(killCanvasHelper){
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-            }
+            // if(killCanvasHelper){
+            //     imgCtx.clearRect(0, 0, canvasWidth, canvasHeight);
+            // }
 
-            if(!killCanvasHelper){
-                requestAnimationFrame(initCanvasHelper);
-            }
+            // if(!killCanvasHelper){
+            //     requestAnimationFrame(initCanvasHelper);
+            // }
 
         }
 
@@ -213,9 +223,9 @@
                 drawDot(canvas,ctx,dots[i]);
             }
 
-            ctx.globalAlpha = imageOpacity; // set image opacity
-            ctx.drawImage(img, imgXStart,imgYStart, imgWidth, imgHeight);
-            ctx.globalAlpha = 1;
+            // ctx.globalAlpha = imageOpacity; // set image opacity
+            // ctx.drawImage(img, imgXStart,imgYStart, imgWidth, imgHeight);
+            // ctx.globalAlpha = 1;
         
             time += .1;
             requestAnimationFrame(draw);
@@ -231,7 +241,7 @@
         }
 
         let main = async () => {
-            initDots(2000);
+            initDots(1000, 1,1);
             await initCanvasForBuffer();
             await sleep(200);
             await generateValidCoorBuffer();
