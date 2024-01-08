@@ -2,10 +2,10 @@
 <html>
 
     <body style="margin: 0px">
-        <canvas id="canvas" style="border: 1px solid black; position: inline-block"></canvas>
-        <canvas id="imgCanvas" style="border: 1px solid red; position: inline-block; margin-left: 10px"></canvas>
+        <canvas id="canvas" style="border: 1px solid black; position: inline-block; margin:10px"></canvas>
         <!-- <img src="./person.jpg" id="img" style="visibility:hidden"/> -->
         <video src="personVid.mp4" id="vid" width="160" height="210" controls></video>
+        <canvas id="imgCanvas" style="border: 1px solid red; position: inline-block; margin-left: 10px; visibility: hidden"></canvas>
         <input type="range" min="0" max="50" style="margin-top: 0px; display:block" id="distSlider"/>
         <p id="distText">Distance Treshold : </p>
     </body>
@@ -326,6 +326,10 @@
             For some reason, google chrome does not allow one to set the currentTime attibute of a video.
             The solution will be to create a buffer, play the video for a couple ms, pause the video at
             that frame, and then create the buffer at that frame idx.
+
+            -----------------------------------------------------------------------------------------------
+
+            all images / videos are AI generated
 
         */
 
