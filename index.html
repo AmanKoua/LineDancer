@@ -44,107 +44,6 @@
         let distSlider = document.getElementById("distSlider");
         let distText = document.getElementById("distText");
 
-        // window.onmousemove = (e) => {
-        //     let mouseX;
-        //     let mouseY;
-        //     mouseX = e.clientX;
-        //     mouseY = e.clientY;
-        //     let colorData = imgCtx.getImageData(mouseX,mouseY, 1, 1);
-        //     console.log(colorData.data[0],colorData.data[1],colorData.data[2],colorData.data[3]);
-        // }
-
-        // window.onmousemove = (e) => {
-        //     let mouseX;
-        //     let mouseY;
-        //     mouseX = e.clientX;
-        //     mouseY = e.clientY;
-        //     console.log(validCoorBuffer[mouseX][mouseY], mouseX, mouseY);
-        //     // console.log(isValidImgCoor(mouseX, mouseY));
-        // }
-
-        // window.onmousemove = (e) => {
-        //     let mouseX;
-        //     let mouseY;
-        //     mouseX = e.clientX;  
-        //     mouseY = e.clientY;
-        //     distTresh = mouseX / 10;
-        // }
-
-        distSlider.addEventListener("change", (e) => {
-            distTresh = e.target.value;
-            distText.innerHTML = "Distance Treshold : " + distTresh;
-        })
-
-        let getVideoDuration = () => {
-
-            return new Promise((res,rej) => {
-
-                let temp = setInterval(()=>{
-
-                    console.log(vid.duration);
-
-                    if(vid.duration == NaN){
-                        // do nothing
-                    }
-                    else{
-                        vidDuration = vid.duration;
-                        clearInterval(temp);
-                        res();
-                    }
-
-                },100)
-
-            })
-
-        }
-
-        let generateValidCoorBuffer = (time) => { // works
-
-            return new Promise((res, rej) => {
-
-                temp = []
-
-                for(let x = 0; x < canvasWidth + 1; x++){
-                    let yBuff = [];
-                    for(let y = 0; y < canvasHeight + 1; y++){
-
-                        if(isValidImgCoor(x,y)){
-                            yBuff[y] = 1;
-                        }
-                        else{
-                            yBuff[y] = 0;
-                        }   
-
-                    }
-                    temp[x] = yBuff;
-                }
-
-                validCoorBuffer[time] = temp;
-                res();
-
-            });
-
-        }
-
-        let isValidImgCoor = (x, y) => { // works
-
-            if(x < imgXStart || x > imgXStart + imgWidth){
-                return false;
-            }
-
-            if( y < imgYStart || y > imgYStart + imgHeight){
-                return false;
-            }
-
-            let colorData = imgCtx.getImageData(x,y,1,1);
-
-            if(colorData.data[0] + colorData.data[1] + colorData.data[2] < 15){ // if color is very dark (black), valid
-                return true;
-            }
-
-            return false;
-        }
-
         class Dot {
             constructor(x,y,xMult, yMult){
                 this.x = x;
@@ -198,6 +97,11 @@
                     // if(tempDist < (Math.sin(time) * distTresh)){ // makes distTresh oscillate up and down
                     if(tempDist < (distTresh)){
                         try{
+
+                            /*
+                                Determining if a coordinate is valid or not in real-time is far too CPU intensive. A validCoorBuffer must be utilized
+                            */
+
                             if(validCoorBuffer[time][Math.floor(this.x)][Math.floor(this.y)] == 1 && validCoorBuffer[time][Math.floor(dots[i].x)][Math.floor(dots[i].y)] == 1){
                                 ctx.beginPath();
                                 ctx.moveTo(this.x,this.y);
@@ -206,21 +110,8 @@
                                 // ctx.strokeStyle = `rgb(${255 - tempDist*distTreshMult}, 0, ${tempDist})`
                                 ctx.stroke();
                             }
-
-                            /*
-                                Determining if a coordinate is valid or not in real-time is far too CPU intensive. A validCoorBuffer must be utilized
-                            */
-
-                            // if(isValidImgCoor(Math.floor(this.x), Math.floor(this.y)) && isValidImgCoor(Math.floor(dots[i].x),Math.floor(dots[i].y))){ 
-                            //     ctx.beginPath();
-                            //     ctx.moveTo(this.x,this.y);
-                            //     ctx.lineTo(dots[i].x, dots[i].y);
-                            //     ctx.lineWidth = .3;
-                            //     // ctx.strokeStyle = `rgb(${255 - tempDist*distTreshMult}, 0, ${tempDist})`
-                            //     ctx.stroke();
-                            // }
                         }
-                        catch(e){
+                        catch(e){ // weid bug workaround
                             continue;
                         }
                     }
@@ -247,18 +138,67 @@
             ctx.stroke();
         }
 
-        let progressVideo = (stepSize) => {
+        let draw = () => {
 
-            // console.log("playing vid!");
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            return new Promise(async (res,rej) => {
-              
-                await vid.play();
+            for(let i = 0 ; i < dots.length; i++){
+                drawDot(canvas,ctx,dots[i]);
+            }
 
-                setTimeout( ()=>{
-                    vid.pause();
-                    res();
-                },stepSize);
+            requestAnimationFrame(draw);
+
+        }
+
+        // window.onmousemove = (e) => { // get colorData at idx and log to console.
+        //     let mouseX;
+        //     let mouseY;
+        //     mouseX = e.clientX;
+        //     mouseY = e.clientY;
+        //     let colorData = imgCtx.getImageData(mouseX,mouseY, 1, 1);
+        //     console.log(colorData.data[0],colorData.data[1],colorData.data[2],colorData.data[3]);
+        // }
+
+        // window.onmousemove = (e) => { // getValidCoorBuffer result at idx and log to console.
+        //     let mouseX;
+        //     let mouseY;
+        //     mouseX = e.clientX;
+        //     mouseY = e.clientY;
+        //     console.log(validCoorBuffer[mouseX][mouseY], mouseX, mouseY);
+        //     // console.log(isValidImgCoor(mouseX, mouseY));
+        // }
+
+        // window.onmousemove = (e) => { // Use mouse postion to play around with dist tresh (old technique)
+        //     let mouseX;
+        //     let mouseY;
+        //     mouseX = e.clientX;  
+        //     mouseY = e.clientY;
+        //     distTresh = mouseX / 10;
+        // }
+
+        distSlider.addEventListener("change", (e) => {
+            distTresh = e.target.value;
+            distText.innerHTML = "Distance Treshold : " + distTresh;
+        })
+
+        let getVideoDuration = () => {
+
+            return new Promise((res,rej) => {
+
+                let temp = setInterval(()=>{
+
+                    console.log(vid.duration);
+
+                    if(vid.duration == NaN){
+                        // do nothing
+                    }
+                    else{
+                        vidDuration = vid.duration;
+                        clearInterval(temp);
+                        res();
+                    }
+
+                },100)
 
             })
 
@@ -277,22 +217,68 @@
 
         }
 
-        let draw = () => {
+        let generateValidCoorBuffer = (time) => { // works
 
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            return new Promise((res, rej) => {
 
-            for(let i = 0 ; i < dots.length; i++){
-                drawDot(canvas,ctx,dots[i]);
-            }
-        
-            requestAnimationFrame(draw);
+                temp = []
+
+                for(let x = 0; x < canvasWidth + 1; x++){
+                    let yBuff = [];
+                    for(let y = 0; y < canvasHeight + 1; y++){
+
+                        if(isValidImgCoor(x,y)){
+                            yBuff[y] = 1;
+                        }
+                        else{
+                            yBuff[y] = 0;
+                        }   
+
+                    }
+                    temp[x] = yBuff;
+                }
+
+                validCoorBuffer[time] = temp;
+                res();
+
+            });
 
         }
 
-        let sleep = (time) => {
-            return new Promise((res, rej) => {
-                setTimeout(()=>{res()},time);
-            });
+        let isValidImgCoor = (x, y) => { // works
+
+            if(x < imgXStart || x > imgXStart + imgWidth){
+                return false;
+            }
+
+            if( y < imgYStart || y > imgYStart + imgHeight){
+                return false;
+            }
+
+            let colorData = imgCtx.getImageData(x,y,1,1);
+
+            if(colorData.data[0] + colorData.data[1] + colorData.data[2] < 15){ // if color is very dark (black), valid
+                return true;
+            }
+
+            return false;
+        }
+
+        let progressVideo = (stepSize) => {
+
+            // console.log("playing vid!");
+
+            return new Promise(async (res,rej) => {
+              
+                await vid.play();
+
+                setTimeout( ()=>{
+                    vid.pause();
+                    res();
+                },stepSize);
+
+            })
+
         }
 
         let setTimeInterval = (stepSize) => {
@@ -302,9 +288,15 @@
             }, stepSize);
         }
 
+        let sleep = (time) => { // sleep util function
+            return new Promise((res, rej) => {
+                setTimeout(()=>{res()},time);
+            });
+        }
+
         let main = async () => {
 
-            let stepSize = 40; // frame diff, in ms, to break video into
+            let stepSize = 40; // frame diff, in ms, to break video into. 16.77 = aprox 60 FPS
 
             await getVideoDuration();
             await sleep(200);
