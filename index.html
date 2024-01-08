@@ -7,8 +7,11 @@
         <video src="personVid.mp4" id="vid" width="160" height="210" controls></video>
         <canvas id="imgCanvas" style="border: 1px solid red; position: inline-block; margin-left: 10px; visibility: hidden"></canvas>
         <input type="range" min="0" max="50" style="margin-top: 0px; display:block" id="distSlider"/>
+        <p id="distText">Distance Treshold : </p>   
+        <input type="range" min="16" max="1000" style="margin-top: 0px; display:block" id="stepSlider"/>
+        <p id="stepText">Step size : </p>   
         <button id="download">Download coordinate buffer</button>
-        <p id="distText">Distance Treshold : </p>
+        <input id="bufferFileInput" type="file" accept="text/plain"></input>
     </body>
     <script>
 
@@ -25,6 +28,7 @@
         canvas.height = canvasHeight;
         ctx = canvas.getContext("2d");
 
+        let stepSize = 30; // frame diff, in ms, to break video into. 16.77 = aprox 60 FPS
         let time = 0;
         let distTresh = 10;
         let distTreshMult = 255 / distTresh;
@@ -45,16 +49,44 @@
         let isDownloadLocked = true;
 
         let distSlider = document.getElementById("distSlider");
+        let stepSlider = document.getElementById("stepSlider");
+        let stepText = document.getElementById("stepText");
         let distText = document.getElementById("distText");
         let dlButton = document.getElementById("download");
+        let bufferFileInput = document.getElementById("bufferFileInput");
 
         distSlider.addEventListener("change", (e) => {
             distTresh = e.target.value;
             distText.innerHTML = "Distance Treshold : " + distTresh;
         })
 
+        stepSlider.addEventListener("change", (e) => {
+            stepSize = e.target.value;
+            stepText.innerHTML = "Step size : " + stepSize;
+
+            clearInterval(timeInterval);
+            setTimeInterval(stepSize);
+
+        })
+
         dlButton.addEventListener("click", (e) => {
             downloadValidCoorBuffer();
+        })
+
+        bufferFileInput.addEventListener("change", (e) => {
+
+            if(!bufferFileInput.files || bufferFileInput.files.length == 0){
+                return;
+            }
+
+            let reader = new FileReader();
+            
+            reader.onload = function (e){
+                // console.log(typeof e.target.result);
+                validCoorBuffer = JSON.parse(e.target.result);
+            }
+
+            reader.readAsText(bufferFileInput.files[0]);
         })
 
         class Dot {
@@ -223,7 +255,6 @@
 
             time = 0;
             isDownloadLocked = false; // allow for valid coor buffer downloading
-
         }
 
         let generateValidCoorBuffer = (time) => { // works
@@ -321,7 +352,7 @@
 
         let main = async () => {
 
-            let stepSize = 30; // frame diff, in ms, to break video into. 16.77 = aprox 60 FPS
+            stepSize = 500; // frame diff, in ms, to break video into. 16.77 = aprox 60 FPS
 
             await getVideoDuration();
             await sleep(200);
