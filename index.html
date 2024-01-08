@@ -2,9 +2,12 @@
 <html>
 
     <body style="margin: 0px">
-        <canvas id="imgCanvas" style="border: 1px solid red; position: absolute; margin-left: 170px"></canvas>
-        <canvas id="canvas" style="border: 1px solid black; position: absolute"></canvas>
-        <img src="./person.jpg" id="img" style="visibility:hidden"/>
+        <canvas id="canvas" style="border: 1px solid black; position: inline-block"></canvas>
+        <canvas id="imgCanvas" style="border: 1px solid red; position: inline-block; margin-left: 10px"></canvas>
+        <!-- <img src="./person.jpg" id="img" style="visibility:hidden"/> -->
+        <video src="personVid.mp4" id="vid" width="160" height="210" controls></video>
+        <input type="range" min="0" max="50" style="margin-top: 0px; display:block" id="distSlider"/>
+        <p id="distText">Distance Treshold : </p>
     </body>
     <script>
 
@@ -22,7 +25,7 @@
         ctx = canvas.getContext("2d");
 
         let time = 0;
-        let distTresh = 20;
+        let distTresh = 10;
         let distTreshMult = 255 / distTresh;
         let dots = [];
 
@@ -31,9 +34,15 @@
         let imgYStart = -50;
         let imgWidth = 300;
         let imgHeight = 300;
-        let validCoorBuffer = []; // [x][y]
-        let killCanvasHelper = false;
+        let validCoorBuffer = []; // [frameIdx][x][y]. 3d array
         let imageOpacity = 1;
+
+        let vid = document.getElementById("vid");
+        let vidDuration = undefined; // video duration in seconds
+        let timeInterval = undefined; // interval for rendering video frames onto screen
+
+        let distSlider = document.getElementById("distSlider");
+        let distText = document.getElementById("distText");
 
         // window.onmousemove = (e) => {
         //     let mouseX;
@@ -53,21 +62,51 @@
         //     // console.log(isValidImgCoor(mouseX, mouseY));
         // }
 
-        window.onmousemove = (e) => {
-            let mouseX;
-            let mouseY;
-            mouseX = e.clientX;
-            mouseY = e.clientY;
-            distTresh = mouseX / 10;
+        // window.onmousemove = (e) => {
+        //     let mouseX;
+        //     let mouseY;
+        //     mouseX = e.clientX;  
+        //     mouseY = e.clientY;
+        //     distTresh = mouseX / 10;
+        // }
+
+        distSlider.addEventListener("change", (e) => {
+            distTresh = e.target.value;
+            distText.innerHTML = "Distance Treshold : " + distTresh;
+        })
+
+        let getVideoDuration = () => {
+
+            return new Promise((res,rej) => {
+
+                let temp = setInterval(()=>{
+
+                    console.log(vid.duration);
+
+                    if(vid.duration == NaN){
+                        // do nothing
+                    }
+                    else{
+                        vidDuration = vid.duration;
+                        clearInterval(temp);
+                        res();
+                    }
+
+                },100)
+
+            })
+
         }
 
-        let generateValidCoorBuffer = () => { // works
+        let generateValidCoorBuffer = (time) => { // works
 
             return new Promise((res, rej) => {
 
-                for(let x = 0; x < canvas.width + 1; x++){
+                temp = []
+
+                for(let x = 0; x < canvasWidth + 1; x++){
                     let yBuff = [];
-                    for(let y = 0; y < canvas.height + 1; y++){
+                    for(let y = 0; y < canvasHeight + 1; y++){
 
                         if(isValidImgCoor(x,y)){
                             yBuff[y] = 1;
@@ -77,9 +116,10 @@
                         }   
 
                     }
-                    validCoorBuffer[x] = yBuff;
+                    temp[x] = yBuff;
                 }
 
+                validCoorBuffer[time] = temp;
                 res();
 
             });
@@ -158,7 +198,7 @@
                     // if(tempDist < (Math.sin(time) * distTresh)){ // makes distTresh oscillate up and down
                     if(tempDist < (distTresh)){
                         try{
-                            if(validCoorBuffer[Math.floor(this.x)][Math.floor(this.y)] == 1 && validCoorBuffer[Math.floor(dots[i].x)][Math.floor(dots[i].y)] == 1){
+                            if(validCoorBuffer[time][Math.floor(this.x)][Math.floor(this.y)] == 1 && validCoorBuffer[time][Math.floor(dots[i].x)][Math.floor(dots[i].y)] == 1){
                                 ctx.beginPath();
                                 ctx.moveTo(this.x,this.y);
                                 ctx.lineTo(dots[i].x, dots[i].y);
@@ -166,7 +206,6 @@
                                 // ctx.strokeStyle = `rgb(${255 - tempDist*distTreshMult}, 0, ${tempDist})`
                                 ctx.stroke();
                             }
-
 
                             /*
                                 Determining if a coordinate is valid or not in real-time is far too CPU intensive. A validCoorBuffer must be utilized
@@ -208,25 +247,34 @@
             ctx.stroke();
         }
 
-        let initCanvasHelper = () => {
-            imgCtx.globalAlpha = imageOpacity; // set image opacity
-            imgCtx.drawImage(img, imgXStart,imgYStart, imgWidth, imgHeight);
+        let progressVideo = (stepSize) => {
 
-            // if(killCanvasHelper){
-            //     imgCtx.clearRect(0, 0, canvasWidth, canvasHeight);
-            // }
+            // console.log("playing vid!");
 
-            // if(!killCanvasHelper){
-            //     requestAnimationFrame(initCanvasHelper);
-            // }
+            return new Promise(async (res,rej) => {
+              
+                await vid.play();
+
+                setTimeout( ()=>{
+                    vid.pause();
+                    res();
+                },stepSize);
+
+            })
 
         }
 
-        let initCanvasForBuffer = () => {
-            return new Promise((res, rej) => {
-                initCanvasHelper();
-                res();
-            })
+        let generateVidValidCoorBuffer = async (stepSize) => {
+
+            while(vid.currentTime != vidDuration){ // draw on canvas, create buffer and store at frame idx, play video for stepSize ms, repeat
+                imgCtx.drawImage(vid, imgXStart,imgYStart, imgWidth, imgHeight);
+                await generateValidCoorBuffer(time);                
+                await progressVideo(stepSize);
+                time++;
+            }
+
+            time = 0;
+
         }
 
         let draw = () => {
@@ -236,32 +284,35 @@
             for(let i = 0 ; i < dots.length; i++){
                 drawDot(canvas,ctx,dots[i]);
             }
-
-            // ctx.globalAlpha = imageOpacity; // set image opacity
-            // ctx.drawImage(img, imgXStart,imgYStart, imgWidth, imgHeight);
-            // ctx.globalAlpha = 1;
         
-            time += .1;
             requestAnimationFrame(draw);
 
         }
 
         let sleep = (time) => {
-
             return new Promise((res, rej) => {
                 setTimeout(()=>{res()},time);
             });
+        }
 
+        let setTimeInterval = (stepSize) => {
+            timeInterval = setInterval(()=>{
+                time++;
+                time %= validCoorBuffer.length;
+            }, stepSize);
         }
 
         let main = async () => {
+
+            let stepSize = 40; // frame diff, in ms, to break video into
+
+            await getVideoDuration();
+            await sleep(200);
+            await generateVidValidCoorBuffer(stepSize);
             initDots(1000, 1,1);
-            await initCanvasForBuffer();
             await sleep(200);
-            await generateValidCoorBuffer();
-            await sleep(200);
-            killCanvasHelper = true;
             draw();
+            setTimeInterval(stepSize)
         }
 
         main();
@@ -277,6 +328,13 @@
 
             without sleeping in the main function, drawing image and generating buffer fails (sometimes).
             Refresh of page is required in those instances.
+
+            -----------------------------------------------------------------------------------------------
+
+            For some reason, google chrome does not allow one to set the currentTime attibute of a video.
+            The solution will be to create a buffer, play the video for a couple ms, pause the video at
+            that frame, and then create the buffer at that frame idx.
+
         */
 
     </script>
