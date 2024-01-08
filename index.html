@@ -12,6 +12,8 @@
         <p id="stepText">Step size : </p>   
         <button id="download">Download coordinate buffer</button>
         <input id="bufferFileInput" type="file" accept="text/plain"></input>
+        <button id="toggleDots" style="display:block; margin-top:10px">Toggle Dots</button>
+
     </body>
     <script>
 
@@ -34,6 +36,7 @@
         let distTresh = 10;
         let distTreshMult = 255 / distTresh;
         let dots = [];
+        let renderDots = true;
 
         let img = document.getElementById("img");
         let imgXStart = -80;
@@ -54,6 +57,7 @@
         let stepText = document.getElementById("stepText");
         let distText = document.getElementById("distText");
         let dlButton = document.getElementById("download");
+        let toggleDotsButton = document.getElementById("toggleDots");
         let bufferFileInput = document.getElementById("bufferFileInput");
 
         distSlider.addEventListener("change", (e) => {
@@ -77,6 +81,10 @@
 
         dlButton.addEventListener("click", (e) => {
             downloadValidCoorBuffer();
+        })
+
+        toggleDotsButton.addEventListener("click", (e)=>{
+            renderDots = !renderDots;
         })
 
         bufferFileInput.addEventListener("change", (e) => {
@@ -179,17 +187,31 @@
         }
 
         let drawDot = (canvas,ctx, dot) => {
-            dot.drawLines();
-            // ctx.beginPath();
-            // ctx.arc(dot.x, dot.y, dot.r, 0, 2 * Math.PI);
-            // ctx.fill();
-            dot.updatePos(canvas);
-            // ctx.lineWidth = 1;
-            // ctx.strokeStyle = "rgb(0,0,0)"
-            // ctx.stroke();
+
+            if(renderDots){
+                dot.drawLines();
+                ctx.beginPath();
+                ctx.arc(dot.x, dot.y, dot.r, 0, 2 * Math.PI);
+                ctx.fill();
+                dot.updatePos(canvas);
+                ctx.lineWidth = 1;
+                ctx.strokeStyle = "rgb(0,0,0)"
+                ctx.stroke();
+            }
+            else{
+                dot.drawLines();
+                // ctx.beginPath();
+                // ctx.arc(dot.x, dot.y, dot.r, 0, 2 * Math.PI);
+                // ctx.fill();
+                dot.updatePos(canvas);
+                // ctx.lineWidth = 1;
+                // ctx.strokeStyle = "rgb(0,0,0)"
+                // ctx.stroke();
+            }
+
         }
 
-        let draw = () => {
+        let draw = (drawDots) => {
 
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
