@@ -7,6 +7,7 @@
         <video src="personVid.mp4" id="vid" width="160" height="210" controls></video>
         <canvas id="imgCanvas" style="border: 1px solid red; position: inline-block; margin-left: 10px; visibility: hidden"></canvas>
         <input type="range" min="0" max="50" style="margin-top: 0px; display:block" id="distSlider"/>
+        <button id="download">Download coordinate buffer</button>
         <p id="distText">Distance Treshold : </p>
     </body>
     <script>
@@ -41,8 +42,20 @@
         let vidDuration = undefined; // video duration in seconds
         let timeInterval = undefined; // interval for rendering video frames onto screen
 
+        let isDownloadLocked = true;
+
         let distSlider = document.getElementById("distSlider");
         let distText = document.getElementById("distText");
+        let dlButton = document.getElementById("download");
+
+        distSlider.addEventListener("change", (e) => {
+            distTresh = e.target.value;
+            distText.innerHTML = "Distance Treshold : " + distTresh;
+        })
+
+        dlButton.addEventListener("click", (e) => {
+            downloadValidCoorBuffer();
+        })
 
         class Dot {
             constructor(x,y,xMult, yMult){
@@ -176,11 +189,6 @@
         //     distTresh = mouseX / 10;
         // }
 
-        distSlider.addEventListener("change", (e) => {
-            distTresh = e.target.value;
-            distText.innerHTML = "Distance Treshold : " + distTresh;
-        })
-
         let getVideoDuration = () => {
 
             return new Promise((res,rej) => {
@@ -214,6 +222,7 @@
             }
 
             time = 0;
+            isDownloadLocked = false; // allow for valid coor buffer downloading
 
         }
 
@@ -243,6 +252,22 @@
 
             });
 
+        }
+
+        let downloadValidCoorBuffer = () => {
+
+            if(isDownloadLocked){
+                alert("Cannot download buffer before / during buffer creation!");
+                return;
+            }
+
+            let link = document.createElement("a");
+            let bufferJSON = JSON.stringify(validCoorBuffer);
+            let blob = new Blob([bufferJSON], {type:'text/plain'});
+            let downloadURL = URL.createObjectURL(blob);
+            link.href = downloadURL;
+            link.setAttribute('download', "validCoorBuffer.txt");
+            link.click();
         }
 
         let isValidImgCoor = (x, y) => { // works
@@ -296,7 +321,7 @@
 
         let main = async () => {
 
-            let stepSize = 40; // frame diff, in ms, to break video into. 16.77 = aprox 60 FPS
+            let stepSize = 1000; // frame diff, in ms, to break video into. 16.77 = aprox 60 FPS
 
             await getVideoDuration();
             await sleep(200);
