@@ -29,6 +29,7 @@
         ctx = canvas.getContext("2d");
 
         let stepSize = 30; // frame diff, in ms, to break video into. 16.77 = aprox 60 FPS
+        let isStepSizeLocked = true;
         let time = 0;
         let distTresh = 10;
         let distTreshMult = 255 / distTresh;
@@ -61,6 +62,11 @@
         })
 
         stepSlider.addEventListener("change", (e) => {
+
+            if(isStepSizeLocked){
+                return;
+            }
+
             stepSize = e.target.value;
             stepText.innerHTML = "Step size : " + stepSize;
 
@@ -174,13 +180,13 @@
 
         let drawDot = (canvas,ctx, dot) => {
             dot.drawLines();
-            ctx.beginPath();
-            ctx.arc(dot.x, dot.y, dot.r, 0, 2 * Math.PI);
-            ctx.fill();
+            // ctx.beginPath();
+            // ctx.arc(dot.x, dot.y, dot.r, 0, 2 * Math.PI);
+            // ctx.fill();
             dot.updatePos(canvas);
-            ctx.lineWidth = 1;
-            ctx.strokeStyle = "rgb(0,0,0)"
-            ctx.stroke();
+            // ctx.lineWidth = 1;
+            // ctx.strokeStyle = "rgb(0,0,0)"
+            // ctx.stroke();
         }
 
         let draw = () => {
@@ -361,6 +367,8 @@
             await sleep(200);
             draw();
             setTimeInterval(stepSize)
+
+            isStepSizeLocked = false;
         }
 
         main();
